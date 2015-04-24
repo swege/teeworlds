@@ -264,6 +264,8 @@ set(SOURCE_FILES
     src/engine/sound.h
     src/engine/storage.h
     src/engine/textrender.h
+    src/game/client/components/ai.cpp
+    src/game/client/components/ai.h
     src/game/client/components/binds.cpp
     src/game/client/components/binds.h
     src/game/client/components/broadcast.cpp

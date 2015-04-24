@@ -23,6 +23,7 @@
 #include "gameclient.h"
 
 #include "components/binds.h"
+#include "components/ai.h"
 #include "components/broadcast.h"
 #include "components/camera.h"
 #include "components/chat.h"
@@ -60,6 +61,7 @@ static CMotd gs_Motd;
 static CBroadcast gs_Broadcast;
 static CGameConsole gs_GameConsole;
 static CBinds gs_Binds;
+static CAi gs_Ai;
 static CParticles gs_Particles;
 static CMenus gs_Menus;
 static CSkins gs_Skins;
@@ -107,6 +109,8 @@ void CGameClient::OnConsoleInit()
 	m_pFriends = Kernel()->RequestInterface<IFriends>();
 
 	// setup pointers
+	m_pAi = &::gs_Ai;
+	m_pAi->m_gameClient = this;
 	m_pBinds = &::gs_Binds;
 	m_pGameConsole = &::gs_GameConsole;
 	m_pParticles = &::gs_Particles;
@@ -134,6 +138,7 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(m_pMapimages);
 	m_All.Add(m_pEffects); // doesn't render anything, just updates effects
 	m_All.Add(m_pParticles);
+	m_All.Add(m_pAi);
 	m_All.Add(m_pBinds);
 	m_All.Add(m_pControls);
 	m_All.Add(m_pCamera);
@@ -171,6 +176,7 @@ void CGameClient::OnConsoleInit()
 	m_Input.Add(m_pMenus);
 	m_Input.Add(&gs_Spectator);
 	m_Input.Add(&gs_Emoticon);
+	m_Input.Add(m_pAi);
 	m_Input.Add(m_pControls);
 	m_Input.Add(m_pBinds);
 
@@ -303,6 +309,7 @@ void CGameClient::DispatchInput()
 
 	// clear all events for this frame
 	Input()->ClearEvents();
+
 }
 
 
@@ -439,6 +446,8 @@ void CGameClient::OnRender()
 
 	// dispatch all input to systems
 	DispatchInput();
+
+	m_pAi->Tick();
 
 	// render all systems
 	for(int i = 0; i < m_All.m_Num; i++)

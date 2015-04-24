@@ -225,6 +225,7 @@ public:
 
 	// pointers to all systems
 	class CGameConsole *m_pGameConsole;
+	class CAi *m_pAi;
 	class CBinds *m_pBinds;
 	class CParticles *m_pParticles;
 	class CMenus *m_pMenus;
