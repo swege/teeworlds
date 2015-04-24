@@ -23,5 +23,6 @@ public:
 	virtual void Tick();
 
 	CGameClient *m_gameClient;
+	int m_followClientId = -1;
 };
 #endif
