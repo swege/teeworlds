@@ -94,28 +94,53 @@ bool CAi::OnMouseMove(float x, float y) {
 void CAi::Tick() {
     m_gameClient->m_pControls->m_InputDirectionLeft = 0;
     m_gameClient->m_pControls->m_InputDirectionRight = 0;
+    m_gameClient->m_pControls->m_InputData.m_Jump = 0;
     //m_gameClient->m_pControls->m_InputData.m_Fire = !m_gameClient->m_pControls->m_InputData.m_Fire;
 //    m_gameClient->m_pControls->m_MousePos = vec2(100, 0);
+    if (this->m_followClientId == -1) {
+        return;
+    }
+    CGameClient::CClientData otherClient = m_gameClient->m_aClients[this->m_followClientId];
+    if (!otherClient.m_Active) {
+        this->m_followClientId = -1;
+        return;
+    }
+    CGameClient::CClientData myClient = m_gameClient->m_aClients[m_gameClient->m_Snap.m_LocalClientID];
+    vec2 otherPos = otherClient.m_Predicted.m_Pos;
+    if (otherPos.x == 0 && otherPos.y == 0) {
+        return;
+    }
+    vec2 myPos = myClient.m_Predicted.m_Pos;
+    vec2 newMousePosition = otherPos - myPos;
+    vec2 curMousePosition = m_gameClient->m_pControls->m_MousePos;
+    m_gameClient->m_pControls->m_MousePos += (newMousePosition - curMousePosition) * 0.05;
+    m_gameClient->m_pControls->ClampMousePos();
+    if (abs((int) (myPos.y - otherPos.y)) > 800 ||
+        abs((int) (myPos.x - otherPos.x)) > 800 ||
+        abs((int) (myPos.x - otherPos.x)) < 100) {
+        return;
+    }
+    if (myPos.x > otherPos.x) {
+        m_gameClient->m_pControls->m_InputDirectionLeft = 1;
+    } else if (myPos.x < otherPos.x) {
+        m_gameClient->m_pControls->m_InputDirectionRight = 1;
+    } else {
+        return;
+    }
 
-    CGameClient::CClientData client = m_gameClient->m_aClients[this->m_followClientId];
-    if (client.m_Active) {
-        vec2 otherPosition = client.m_Predicted.m_Pos;
-        if (otherPosition.x == 0 && otherPosition.y == 0) {
-            return;
+    CCharacterCore characterCore = m_gameClient->m_PredictedChar;
+    float PhysSize = 28.0f;
+    // get ground state
+    bool Grounded = false;
+    if(characterCore.m_pCollision->CheckPoint(characterCore.m_Pos.x+PhysSize/2, characterCore.m_Pos.y+PhysSize/2+5))
+        Grounded = true;
+    if(characterCore.m_pCollision->CheckPoint(characterCore.m_Pos.x-PhysSize/2, characterCore.m_Pos.y+PhysSize/2+5))
+        Grounded = true;
+    if (Grounded) {
+        if ((otherPos - myPos).y < -20) {
+            m_gameClient->m_pControls->m_InputData.m_Jump = 1;
         }
-        vec2 myPosition = m_gameClient->m_aClients[m_gameClient->m_Snap.m_LocalClientID].m_Predicted.m_Pos;
-        vec2 newMousePosition = otherPosition - myPosition;
-        vec2 curMousePosition = m_gameClient->m_pControls->m_MousePos;
-        m_gameClient->m_pControls->m_MousePos += (newMousePosition - curMousePosition) * 0.05;
-        m_gameClient->m_pControls->ClampMousePos();
-        if (abs((int) (myPosition.y - otherPosition.y)) > 800 ||
-            abs((int) (myPosition.x - otherPosition.x)) > 800 ||
-            abs((int) (myPosition.x - otherPosition.x)) < 100) {
-        }
-        if (myPosition.x > otherPosition.x) {
-            m_gameClient->m_pControls->m_InputDirectionLeft = 1;
-        } else if (myPosition.x < otherPosition.x) {
-            m_gameClient->m_pControls->m_InputDirectionRight = 1;
-        }
+    } else if (characterCore.m_Vel.y > 0) {
+        m_gameClient->m_pControls->m_InputData.m_Jump = 1;
     }
 }
