@@ -202,19 +202,26 @@ void CMapLayers::OnRender()
 				}
 			}
 
-			if(Render && !IsGameLayer)
+			if(Render || IsGameLayer)
 			{
 				//layershot_begin();
 
 				if(pLayer->m_Type == LAYERTYPE_TILES)
 				{
+					if (!IsGameLayer) {
+						continue;
+					}
 					CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *)pLayer;
-					if(pTMap->m_Image == -1)
-						Graphics()->TextureSet(-1);
-					else
-						Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image));
+					Graphics()->TextureSet(4); // 4 = GameLayer tiles like in the editor
 
 					CTile *pTiles = (CTile *)m_pLayers->Map()->GetData(pTMap->m_Data);
+//					for (int i=0; i<pTMap->m_Width * pTMap->m_Height; i++) {
+//						if (pTiles[i].m_Index == 5) {
+//							// seems to be unhookable, but does not get rendered
+//							// only if we change index to 3, but this breaks prediction
+//							// pTiles[i].m_Index = 3;
+//						}
+//					}
 					Graphics()->BlendNone();
 					vec4 Color = vec4(pTMap->m_Color.r/255.0f, pTMap->m_Color.g/255.0f, pTMap->m_Color.b/255.0f, pTMap->m_Color.a/255.0f);
 					RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND|LAYERRENDERFLAG_OPAQUE,
@@ -225,18 +232,58 @@ void CMapLayers::OnRender()
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
-					CMapItemLayerQuads *pQLayer = (CMapItemLayerQuads *)pLayer;
-					if(pQLayer->m_Image == -1)
-						Graphics()->TextureSet(-1);
-					else
-						Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pQLayer->m_Image));
-
-					CQuad *pQuads = (CQuad *)m_pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
-
+					CQuad quad = CQuad();
+					CColor color = CColor();
+					color.r = 0;
+					color.g = 0;
+					color.b = 0;
+					color.a = 255;
+					quad.m_aColors[0] = quad.m_aColors[1] = quad.m_aColors[2] = quad.m_aColors[3] = color;
+					CPoint p0 = CPoint();
+					p0.x = -800000;
+					p0.y = -600000;
+					CPoint p1 = CPoint();
+					p1.x = 800000;
+					p1.y = -600000;
+					CPoint p2 = CPoint();
+					p2.x = -800000;
+					p2.y = 600000;
+					CPoint p3 = CPoint();
+					p3.x = 800000;
+					p3.y = 600000;
+					CPoint p4 = CPoint();
+					p4.x = 32768;
+					p4.y = 32768;
+					CPoint p5 = CPoint();
+					p5.x = 0;
+					p5.y = 0;
+					CPoint p6 = CPoint();
+					p6.x = 1024;
+					p6.y = 0;
+					CPoint p7 = CPoint();
+					p7.x = 0;
+					p7.y = 1024;
+					CPoint p8 = CPoint();
+					p8.x = 1024;
+					p8.y = 1024;
+					quad.m_aPoints[0] = p0;
+					quad.m_aPoints[1] = p1;
+					quad.m_aPoints[2] = p2;
+					quad.m_aPoints[3] = p3;
+					quad.m_aPoints[4] = p4;
+					quad.m_aTexcoords[0] = p5;
+					quad.m_aTexcoords[1] = p6;
+					quad.m_aTexcoords[2] = p7;
+					quad.m_aTexcoords[3] = p8;
+					quad.m_PosEnv = -1;
+					quad.m_PosEnvOffset = 0;
+					quad.m_ColorEnv = -1;
+					quad.m_ColorEnvOffset = 0;
+					Graphics()->TextureSet(-1);
 					Graphics()->BlendNone();
-					RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_OPAQUE, EnvelopeEval, this);
+					RenderTools()->RenderQuads(&quad, 1, LAYERRENDERFLAG_OPAQUE, EnvelopeEval, this);
 					Graphics()->BlendNormal();
-					RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this);
+					RenderTools()->RenderQuads(&quad, 1, LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this);
 				}
 
 				//layershot_end();

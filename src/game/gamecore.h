@@ -174,8 +174,8 @@ public:
 
 class CCharacterCore
 {
-	CWorldCore *m_pWorld;
 public:
+	CWorldCore *m_pWorld;
 	CCollision *m_pCollision;
 	vec2 m_Pos;
 	vec2 m_Vel;
