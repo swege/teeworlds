@@ -21,8 +21,12 @@
 #include "../gameclient.h"
 #include "../../gamecore.h"
 #include "../../../engine/shared/protocol.h"
+#include "../../../engine/client.h"
+#include "../../mapitems.h"
 
 CAi::CAi() {
+    this->currentStrategy = SEARCH;
+    this->m_followClientId = -1;
 }
 
 void CAi::OnReset() {
@@ -81,21 +85,46 @@ void CAi::OnRender() {
 }
 
 bool CAi::OnInput(IInput::CEvent e) {
-
     // manual keyboard input will not be processed
+//    return false;
     return true;
 }
 
 bool CAi::OnMouseMove(float x, float y) {
     // manual mouse input will not be processed
+//    return false;
     return true;
 }
 
 void CAi::Tick() {
+    if (Client()->State() != IClient::STATE_ONLINE) {
+        return;
+    }
+    switch (this->currentStrategy) {
+        case SEARCH:
+            this->strategySearch();
+            break;
+        case ATTACK:
+            this->strategyAttack();
+            break;
+        case ESCAPE:
+            this->strategyEscape();
+            break;
+    }
+    /*
+//    return;
+    static int64 LastHookTime = 0;
     m_gameClient->m_pControls->m_InputDirectionLeft = 0;
     m_gameClient->m_pControls->m_InputDirectionRight = 0;
     m_gameClient->m_pControls->m_InputData.m_Jump = 0;
     //m_gameClient->m_pControls->m_InputData.m_Fire = !m_gameClient->m_pControls->m_InputData.m_Fire;
+//    m_gameClient->m_pControls->m_InputData.m_Hook = 1;
+    if (time_get() > LastHookTime + 1000000) {
+        LastHookTime = time_get();
+        dbg_msg("ai", "no hook");
+        m_gameClient->m_pControls->m_InputData.m_Hook = 0;
+    }
+
 //    m_gameClient->m_pControls->m_MousePos = vec2(100, 0);
     if (this->m_followClientId == -1) {
         return;
@@ -115,9 +144,10 @@ void CAi::Tick() {
     vec2 curMousePosition = m_gameClient->m_pControls->m_MousePos;
     m_gameClient->m_pControls->m_MousePos += (newMousePosition - curMousePosition) * 0.05;
     m_gameClient->m_pControls->ClampMousePos();
+    vec2 distance = otherPos - myPos;
     if (abs((int) (myPos.y - otherPos.y)) > 800 ||
         abs((int) (myPos.x - otherPos.x)) > 800 ||
-        abs((int) (myPos.x - otherPos.x)) < 100) {
+        abs((int) (distance.x * distance.x + distance.y * distance.y)) < 50*50) {
         return;
     }
     if (myPos.x > otherPos.x) {
@@ -143,4 +173,53 @@ void CAi::Tick() {
     } else if (characterCore.m_Vel.y > 0) {
         m_gameClient->m_pControls->m_InputData.m_Jump = 1;
     }
+    if (m_gameClient->m_pControls->m_InputDirectionRight) {
+        if (characterCore.m_pCollision->CheckPoint(characterCore.m_Pos.x+25, characterCore.m_Pos.y)) {
+            m_gameClient->m_pControls->m_InputData.m_Jump = 1;
+        }
+    } else if (m_gameClient->m_pControls->m_InputDirectionLeft) {
+        if (characterCore.m_pCollision->CheckPoint(characterCore.m_Pos.x-25, characterCore.m_Pos.y)) {
+            m_gameClient->m_pControls->m_InputData.m_Jump = 1;
+        }
+    }
+     */
 }
+
+void CAi::strategySearch() {
+    static int walkDirection = -1;
+    CMapItemLayerTilemap *gameLayer = (CMapItemLayerTilemap *) m_gameClient->Layers()->GameLayer();
+    CTile *pTiles = (CTile *) m_gameClient->Layers()->Map()->GetData(gameLayer->m_Data);
+    for (int i = 0; i < gameLayer->m_Width * gameLayer->m_Height; i++) {
+        if (i < gameLayer->m_Width) {
+            continue;
+        }
+        CTile aboveTile = pTiles[i - gameLayer->m_Width];
+        bool walkableTile = (pTiles[i].m_Index == TILE_SOLID || pTiles[i].m_Index == TILE_NOHOOK || pTiles[i].m_Index == 5) &&
+                            (aboveTile.m_Index == TILE_AIR || (aboveTile.m_Index >= 192 && aboveTile.m_Index <= 200));
+        // 5 seems to be the actual nohook tile
+        // 192 .. 200 seem to be the entity tiles (health, armor, weapons...). Dont know why ENTITIY_... doesnt work.
+        if (walkableTile) {
+
+        }
+    }
+    if (walkDirection == -1) {
+//        m_gameClient->m_PredictedChar
+        m_gameClient->m_pControls->m_InputDirectionLeft = 1;
+        m_gameClient->m_pControls->m_InputDirectionRight = 0;
+    } else if (walkDirection == 1) {
+        m_gameClient->m_pControls->m_InputDirectionLeft = 0;
+        m_gameClient->m_pControls->m_InputDirectionRight = 1;
+    }
+    else {
+        m_gameClient->m_pControls->m_InputDirectionLeft = 0;
+        m_gameClient->m_pControls->m_InputDirectionRight = 0;
+    }
+}
+
+void CAi::strategyAttack() {
+}
+
+void CAi::strategyEscape() {
+}
+
+//void CAi::walkable(int ti)

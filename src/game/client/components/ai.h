@@ -8,6 +8,14 @@
 
 class CAi : public CComponent
 {
+	enum Strategy {
+		SEARCH,
+		ATTACK,
+		ESCAPE,
+	};
+
+	Strategy currentStrategy;
+
 public:
 
 	CAi();
@@ -21,8 +29,11 @@ public:
 	virtual void OnConsoleInit();
 	virtual void OnPlayerDeath();
 	virtual void Tick();
+	virtual void strategySearch();
+	virtual void strategyAttack();
+	virtual void strategyEscape();
 
 	CGameClient *m_gameClient;
-	int m_followClientId = -1;
+	int m_followClientId;
 };
 #endif

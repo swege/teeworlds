@@ -208,11 +208,15 @@ void CMapLayers::OnRender()
 
 				if(pLayer->m_Type == LAYERTYPE_TILES)
 				{
-					if (!IsGameLayer) {
-						continue;
-					}
 					CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *)pLayer;
-					Graphics()->TextureSet(4); // 4 = GameLayer tiles like in the editor
+					if (IsGameLayer) {
+						Graphics()->TextureSet(4); // 4 = GameLayer tiles like in the editor
+					} else if(pTMap->m_Image == -1) {
+						Graphics()->TextureSet(-1);
+					} else {
+						Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image));
+					}
+
 
 					CTile *pTiles = (CTile *)m_pLayers->Map()->GetData(pTMap->m_Data);
 //					for (int i=0; i<pTMap->m_Width * pTMap->m_Height; i++) {
@@ -234,9 +238,9 @@ void CMapLayers::OnRender()
 				{
 					CQuad quad = CQuad();
 					CColor color = CColor();
-					color.r = 0;
-					color.g = 0;
-					color.b = 0;
+					color.r = 100;
+					color.g = 100;
+					color.b = 100;
 					color.a = 255;
 					quad.m_aColors[0] = quad.m_aColors[1] = quad.m_aColors[2] = quad.m_aColors[3] = color;
 					CPoint p0 = CPoint();
