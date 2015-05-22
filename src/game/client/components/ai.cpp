@@ -183,6 +183,7 @@ void CAi::Tick() {
 }
 
 void CAi::strategySearch() {
+    return;
     static int walkDirection = 1;
     vec2 pos = m_gameClient->m_PredictedChar.m_Pos;
     if (walkDirection == -1) {
