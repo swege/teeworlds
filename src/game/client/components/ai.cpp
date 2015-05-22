@@ -25,6 +25,7 @@
 #include "../../mapitems.h"
 
 CAi::CAi() {
+    this->aiActive = true;
     this->currentStrategy = SEARCH;
     this->m_followClientId = -1;
 }
@@ -39,27 +40,22 @@ void CAi::OnRelease() {
 void CAi::OnPlayerDeath() {
 }
 
-static void ConKeyInputState(IConsole::IResult *pResult, void *pUserData) {
-}
-
-static void ConKeyInputCounter(IConsole::IResult *pResult, void *pUserData) {
-
-}
-
 struct CInputSet {
 
 };
 
-static void ConKeyInputSet(IConsole::IResult *pResult, void *pUserData) {
-
+static void toggleAi(IConsole::IResult *pResult, void *pUserData) {
+    CAi *ai = (CAi *)pUserData;
+    ai->disableAi();
 }
 
-static void ConKeyInputNextPrevWeapon(IConsole::IResult *pResult, void *pUserData) {
-
+void CAi::disableAi() {
+    this->aiActive = !this->aiActive;
+    this->walkStop();
 }
 
 void CAi::OnConsoleInit() {
-
+    Console()->Register("toggle_ai", "", CFGFLAG_CLIENT, toggleAi, this, "Toggle ai");
 }
 
 void CAi::OnMessage(int MsgType, void *pRawMsg) {
@@ -85,20 +81,21 @@ void CAi::OnRender() {
 }
 
 bool CAi::OnInput(IInput::CEvent e) {
-    // manual keyboard input will not be processed
-//    return false;
-    return true;
+    // manual keyboard input will not be processed if ai is active
+    return aiActive;
 }
 
 bool CAi::OnMouseMove(float x, float y) {
-    // manual mouse input will not be processed
-//    return false;
-    return true;
+    // manual mouse input will not be processed if ai is active
+    return aiActive;
 }
 
 void CAi::Tick() {
     if (Client()->State() != IClient::STATE_ONLINE) {
         return;
+    }
+    if (aiActive) {
+        m_gameClient->m_pControls->m_InputData.m_Jump = 0;
     }
     switch (this->currentStrategy) {
         case SEARCH:
@@ -186,33 +183,25 @@ void CAi::Tick() {
 }
 
 void CAi::strategySearch() {
-    static int walkDirection = -1;
-    CMapItemLayerTilemap *gameLayer = (CMapItemLayerTilemap *) m_gameClient->Layers()->GameLayer();
-    CTile *pTiles = (CTile *) m_gameClient->Layers()->Map()->GetData(gameLayer->m_Data);
-    for (int i = 0; i < gameLayer->m_Width * gameLayer->m_Height; i++) {
-        if (i < gameLayer->m_Width) {
-            continue;
-        }
-        CTile aboveTile = pTiles[i - gameLayer->m_Width];
-        bool walkableTile = (pTiles[i].m_Index == TILE_SOLID || pTiles[i].m_Index == TILE_NOHOOK || pTiles[i].m_Index == 5) &&
-                            (aboveTile.m_Index == TILE_AIR || (aboveTile.m_Index >= 192 && aboveTile.m_Index <= 200));
-        // 5 seems to be the actual nohook tile
-        // 192 .. 200 seem to be the entity tiles (health, armor, weapons...). Dont know why ENTITIY_... doesnt work.
-        if (walkableTile) {
-
-        }
-    }
+    static int walkDirection = 1;
+    vec2 pos = m_gameClient->m_PredictedChar.m_Pos;
     if (walkDirection == -1) {
-//        m_gameClient->m_PredictedChar
-        m_gameClient->m_pControls->m_InputDirectionLeft = 1;
-        m_gameClient->m_pControls->m_InputDirectionRight = 0;
+        walkLeft();
     } else if (walkDirection == 1) {
-        m_gameClient->m_pControls->m_InputDirectionLeft = 0;
-        m_gameClient->m_pControls->m_InputDirectionRight = 1;
+        walkRight();
     }
     else {
-        m_gameClient->m_pControls->m_InputDirectionLeft = 0;
-        m_gameClient->m_pControls->m_InputDirectionRight = 0;
+        walkStop();
+    }
+    bool walkable = false;
+    for (int i=1; i<4; i++) {
+        if (walkableTile(m_gameClient->m_PredictedChar.m_Pos + vec2(walkDirection * 32, i*32))) {
+            walkable = true;
+            break;
+        }
+    }
+    if (!walkable) {
+        jump();
     }
 }
 
@@ -222,4 +211,55 @@ void CAi::strategyAttack() {
 void CAi::strategyEscape() {
 }
 
-//void CAi::walkable(int ti)
+bool CAi::walkableTile(int tileId) {
+    CMapItemLayerTilemap *gameLayer = (CMapItemLayerTilemap *) m_gameClient->Layers()->GameLayer();
+    CTile *pTiles = (CTile *) m_gameClient->Layers()->Map()->GetData(gameLayer->m_Data);
+    if (tileId < gameLayer->m_Width) {
+        return false;
+    }
+    CTile aboveTile = pTiles[tileId - gameLayer->m_Width];
+    // 5 seems to be the actual nohook tile
+    // 192 .. 200 seem to be the entity tiles (health, armor, weapons...). Dont know why ENTITIY_... doesnt work.
+    return (pTiles[tileId].m_Index == TILE_SOLID || pTiles[tileId].m_Index == TILE_NOHOOK || pTiles[tileId].m_Index == 5) &&
+           (aboveTile.m_Index == TILE_AIR || (aboveTile.m_Index >= 192 && aboveTile.m_Index <= 200));
+}
+
+bool CAi::walkableTile(vec2 tilePos) {
+    int tileId = (int)(tilePos.x / 32) + (int)(tilePos.y / 32) * m_gameClient->Layers()->GameLayer()->m_Width;
+    return walkableTile(tileId);
+}
+
+void CAi::jump() {
+    if (!aiActive) {
+        return;
+    }
+    static int64 lastJumped = 0;
+    if (time_get() - lastJumped > 80000) {
+        m_gameClient->m_pControls->m_InputData.m_Jump = 1;
+        lastJumped = time_get();
+    }
+}
+
+void CAi::walkLeft() {
+    if (!aiActive) {
+        return;
+    }
+    m_gameClient->m_pControls->m_InputDirectionLeft = 1;
+    m_gameClient->m_pControls->m_InputDirectionRight = 0;
+}
+
+void CAi::walkRight() {
+    if (!aiActive) {
+        return;
+    }
+    m_gameClient->m_pControls->m_InputDirectionLeft = 0;
+    m_gameClient->m_pControls->m_InputDirectionRight = 1;
+}
+
+void CAi::walkStop() {
+    if (aiActive) {
+        return;
+    }
+    m_gameClient->m_pControls->m_InputDirectionLeft = 0;
+    m_gameClient->m_pControls->m_InputDirectionRight = 0;
+}

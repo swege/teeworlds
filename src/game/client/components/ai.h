@@ -5,6 +5,7 @@
 #include <base/vmath.h>
 #include <game/client/component.h>
 #include "controls.h"
+#include "../../../base/vmath.h"
 
 class CAi : public CComponent
 {
@@ -15,6 +16,12 @@ class CAi : public CComponent
 	};
 
 	Strategy currentStrategy;
+	bool walkableTile(int tileId);
+	bool walkableTile(vector2_base<float>);
+	bool aiActive;
+	void strategySearch();
+	void strategyAttack();
+	void strategyEscape();
 
 public:
 
@@ -29,11 +36,17 @@ public:
 	virtual void OnConsoleInit();
 	virtual void OnPlayerDeath();
 	virtual void Tick();
-	virtual void strategySearch();
-	virtual void strategyAttack();
-	virtual void strategyEscape();
+	virtual void disableAi();
 
 	CGameClient *m_gameClient;
 	int m_followClientId;
+
+	void jump();
+
+	void walkLeft();
+
+	void walkRight();
+
+	void walkStop();
 };
 #endif
